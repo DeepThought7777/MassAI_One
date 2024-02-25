@@ -1,8 +1,6 @@
 package api
 
 import (
-	"encoding/base64"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -12,7 +10,7 @@ import (
 
 var entities = make(map[string]*mind.Entity)
 
-// registerEntity handles the registering of an entity to the MassAI mind.
+// RegisterEntity handles the registering of an entity to the MassAI mind.
 func RegisterEntity(w http.ResponseWriter, r *http.Request) {
 	params := r.URL.Query()
 	entityID := params.Get("entityId")
@@ -21,27 +19,45 @@ func RegisterEntity(w http.ResponseWriter, r *http.Request) {
 
 	if _, exists := entities[entityID]; exists {
 		w.WriteHeader(http.StatusConflict)
-		w.Write([]byte(codebase.ERR_ALREADY_REGISTERED))
+		codebase.WriteToBody(w, codebase.ErrorAlreadyRegistered)
 		return
 	}
 
 	inputs, err := strconv.Atoi(bytesInput)
 	if err != nil || inputs < 1 {
 		w.WriteHeader(http.StatusConflict)
-		w.Write([]byte(codebase.ERR_INPUTCOUNT_NOT_VALID))
+		codebase.WriteToBody(w, codebase.ErrorValueNotPositive)
 		return
 	}
 
 	outputs, err := strconv.Atoi(bytesOutput)
-	if err != nil || inputs < 1 {
+	if err != nil || outputs < 1 {
 		w.WriteHeader(http.StatusConflict)
-		w.Write([]byte(codebase.ERR_OUTPUTCOUNT_NOT_VALID))
+		codebase.WriteToBody(w, codebase.ErrorValueNotPositive)
 		return
 	}
 
 	entities[entityID] = mind.NewEntity(entityID, inputs, outputs)
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(codebase.INFO_ENTITY_REGISTERED))
+	codebase.WriteToBody(w, codebase.InfoEntityRegistered)
+}
+
+// UnregisterEntity handles the unregistering of an entity to the MassAI mind.
+// This is akin to amputating a limb, because unregistering just chops off the nerves for inputs and outputs,
+// and leaves the Neurons it was connected to intact.
+func UnregisterEntity(w http.ResponseWriter, r *http.Request) {
+	params := r.URL.Query()
+	entityID := params.Get("entityId")
+
+	if _, exists := entities[entityID]; !exists {
+		w.WriteHeader(http.StatusConflict)
+		codebase.WriteToBody(w, codebase.ErrorNotRegistered)
+		return
+	}
+
+	delete(entities, entityID)
+	w.WriteHeader(http.StatusOK)
+	codebase.WriteToBody(w, codebase.InfoEntityUnregistered)
 }
 
 func ConnectEntity(w http.ResponseWriter, r *http.Request) {
@@ -51,14 +67,20 @@ func ConnectEntity(w http.ResponseWriter, r *http.Request) {
 	entity, exists := entities[entityID]
 	if !exists {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(w, "Not Found - Entity not registered")
+		codebase.WriteToBody(w, codebase.ErrorNotRegistered)
+		return
+	}
+
+	if entity.IsConnected {
+		w.WriteHeader(http.StatusConflict)
+		codebase.WriteToBody(w, codebase.ErrorEntityAlreadyConnected)
 		return
 	}
 
 	entity.IsConnected = true
 
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "OK")
+	codebase.WriteToBody(w, codebase.InfoEntityConnected)
 }
 
 func DisconnectEntity(w http.ResponseWriter, r *http.Request) {
@@ -68,58 +90,64 @@ func DisconnectEntity(w http.ResponseWriter, r *http.Request) {
 	entity, exists := entities[entityID]
 	if !exists {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(w, "Not Found - Entity not registered")
+		codebase.WriteToBody(w, codebase.ErrorNotRegistered)
 		return
 	}
 
 	if !entity.IsConnected {
 		w.WriteHeader(http.StatusConflict)
-		fmt.Fprint(w, "Conflict - Entity not connected")
+		codebase.WriteToBody(w, codebase.ErrorEntityNotConnected)
 		return
 	}
 
 	entity.IsConnected = false
 
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "OK")
+	codebase.WriteToBody(w, codebase.InfoEntityDisconnected)
 }
 
 func SendInputs(w http.ResponseWriter, r *http.Request) {
-	// Parse query parameters
 	entityID := r.URL.Query().Get("entityId")
 	inputsBase64 := r.URL.Query().Get("inputsBase64")
 
-	// Validate required parameters
 	if entityID == "" || inputsBase64 == "" {
-		http.Error(w, "Missing required parameters", http.StatusBadRequest)
-		return
-	}
-
-	// Decode BASE64-encoded input bytes
-	inputs, err := base64.StdEncoding.DecodeString(inputsBase64)
-	if err != nil {
-		http.Error(w, "Invalid BASE64 encoding", http.StatusBadRequest)
+		w.WriteHeader(http.StatusConflict)
+		codebase.WriteToBody(w, codebase.ErrorEntityNotConnected)
 		return
 	}
 
 	entity, exists := entities[entityID]
 	if !exists {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(w, "Not Found - Entity not registered")
+		codebase.WriteToBody(w, codebase.ErrorNotRegistered)
 		return
 	}
 
-	// Check BASE64 string length requirements
+	if !entity.IsConnected {
+		w.WriteHeader(http.StatusConflict)
+		codebase.WriteToBody(w, codebase.ErrorEntityNotConnected)
+		return
+	}
+
+	inputs, err := codebase.Base64ToByteSlice(inputsBase64)
+	if err != nil {
+		w.WriteHeader(http.StatusConflict)
+		codebase.WriteToBody(w, codebase.ErrorCodingFailed)
+		return
+	}
+
 	if len(inputs) != entity.BytesInput {
-		w.WriteHeader(http.StatusPreconditionFailed)
-		fmt.Fprint(w, "Precondition Failed - BASE64 string length requirements not met")
+		w.WriteHeader(http.StatusConflict)
+		codebase.WriteToBody(w, codebase.ErrorLengthInvalid)
 		return
 	}
 
 	entity.Base64Input = inputsBase64
+	// also copy to output for now, to test...
+	entity.Base64Output = inputsBase64
 
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "OK")
+	codebase.WriteToBody(w, codebase.InfoInputDataSent)
 }
 
 func GetOutputs(w http.ResponseWriter, r *http.Request) {
@@ -129,23 +157,29 @@ func GetOutputs(w http.ResponseWriter, r *http.Request) {
 	entity, exists := entities[entityID]
 	if !exists {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(w, "Not Found - Entity not registered")
+		codebase.WriteToBody(w, codebase.ErrorNotRegistered)
 		return
 	}
 
 	if !entity.IsConnected {
-		w.WriteHeader(http.StatusPreconditionFailed)
-		fmt.Fprint(w, "Precondition Failed - Entity not connected")
+		w.WriteHeader(http.StatusConflict)
+		codebase.WriteToBody(w, codebase.ErrorEntityNotConnected)
 		return
 	}
 
-	// Check BASE64 string length requirements
-	if len(entity.Base64Output) != entity.BytesOutput {
-		w.WriteHeader(http.StatusPreconditionFailed)
-		fmt.Fprint(w, "Precondition Failed - BASE64 string length requirements not met")
+	outputs, err := codebase.Base64ToByteSlice(entity.Base64Output)
+	if err != nil {
+		w.WriteHeader(http.StatusConflict)
+		codebase.WriteToBody(w, codebase.ErrorCodingFailed)
+		return
+	}
+
+	if len(outputs) != entity.BytesOutput {
+		w.WriteHeader(http.StatusConflict)
+		codebase.WriteToBody(w, codebase.ErrorLengthInvalid)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, entity.Base64Output)
+	codebase.WriteToBody(w, codebase.InfoOutputDataValid)
 }

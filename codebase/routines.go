@@ -2,15 +2,15 @@ package codebase
 
 import (
 	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
 )
 
-// displayAndOptionallyExit() displays an error message,
-// waits for enter to be pressed, then optionally exits the program.
-func displayAndOptionallyExit(errorMessage string, exit bool) {
+func DisplayAndOptionallyExit(errorMessage string, exit bool) {
 	fmt.Println(errorMessage)
 	fmt.Println(">>> Press the [ENTER] key to end the program <<<")
 	_, err := fmt.Scanln()
@@ -81,4 +81,31 @@ func NewGUID() string {
 	returnGuid := fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
 	fmt.Println(returnGuid)
 	return returnGuid
+}
+
+func RandomBytes(numBytes int) ([]byte, error) {
+	if numBytes < 0 {
+		return nil, fmt.Errorf("numBytes cannot be negative")
+	}
+	bytes := make([]byte, numBytes)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return nil, err
+	}
+	return bytes, nil
+}
+
+func ByteSliceToBase64URL(data []byte) string {
+	return base64.RawURLEncoding.EncodeToString(data)
+}
+
+func Base64ToByteSlice(data string) ([]byte, error) {
+	return base64.RawURLEncoding.DecodeString(data)
+}
+
+func WriteToBody(w http.ResponseWriter, message string) {
+	_, err := w.Write([]byte(message))
+	if err != nil {
+		fmt.Printf("ERROR: Couldn't write Body: %s\n", message)
+	}
 }

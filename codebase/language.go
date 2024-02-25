@@ -1,8 +1,18 @@
 package codebase
 
 const (
-	INFO_ENTITY_REGISTERED    = "Entity registered correctly, you can Connect now"
-	ERR_ALREADY_REGISTERED    = "Entity already registered, cannot modify configuration"
-	ERR_INPUTCOUNT_NOT_VALID  = "bytesInput is not a positive number"
-	ERR_OUTPUTCOUNT_NOT_VALID = "bytesOutput is not a positive number"
+	InfoEntityRegistered   = "Entity registered correctly"
+	InfoEntityUnregistered = "Entity unregistered correctly"
+	InfoEntityConnected    = "Entity connected correctly"
+	InfoEntityDisconnected = "Entity disconnected correctly"
+	InfoInputDataSent      = "Data sent correctly"
+	InfoOutputDataValid    = "Data outputs valid"
+
+	ErrorAlreadyRegistered      = "Entity already registered"
+	ErrorNotRegistered          = "Entity not registered"
+	ErrorValueNotPositive       = "Value is not a positive number"
+	ErrorLengthInvalid          = "length specified is invalid"
+	ErrorEntityNotConnected     = "Entity not connected"
+	ErrorEntityAlreadyConnected = "Entity already connected"
+	ErrorCodingFailed           = "Encoding / Decoding failed"
 )

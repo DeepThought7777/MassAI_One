@@ -82,10 +82,11 @@ func main() {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/v1/register", api.RegisterEntity).Methods("GET")
+	router.HandleFunc("/v1/unregister", api.UnregisterEntity).Methods("GET")
 	router.HandleFunc("/v1/connect", api.ConnectEntity).Methods("GET")
 	router.HandleFunc("/v1/disconnect", api.DisconnectEntity).Methods("GET")
-	router.HandleFunc("/v1/send-inputs", api.SendInputs).Methods("GET")
-	router.HandleFunc("/v1/get-outputs", api.GetOutputs).Methods("GET")
+	router.HandleFunc("/v1/send_inputs", api.SendInputs).Methods("GET")
+	router.HandleFunc("/v1/get_outputs", api.GetOutputs).Methods("GET")
 
 	http.Handle("/", router)
 	codebase.NewGUID()
