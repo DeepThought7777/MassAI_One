@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -13,6 +14,7 @@ var entities = make(map[string]*mind.Entity)
 // RegisterEntity handles the registering of an entity to the MassAI mind.
 func RegisterEntity(w http.ResponseWriter, r *http.Request) {
 	params := r.URL.Query()
+	fmt.Println(params)
 	entityID := params.Get("entityId")
 	bytesInput := params.Get("bytesInput")
 	bytesOutput := params.Get("bytesOutput")
@@ -47,6 +49,7 @@ func RegisterEntity(w http.ResponseWriter, r *http.Request) {
 // and leaves the Neurons it was connected to intact.
 func UnregisterEntity(w http.ResponseWriter, r *http.Request) {
 	params := r.URL.Query()
+	fmt.Println(params)
 	entityID := params.Get("entityId")
 
 	if _, exists := entities[entityID]; !exists {
@@ -62,6 +65,7 @@ func UnregisterEntity(w http.ResponseWriter, r *http.Request) {
 
 func ConnectEntity(w http.ResponseWriter, r *http.Request) {
 	params := r.URL.Query()
+	fmt.Println(params)
 	entityID := params.Get("entityId")
 
 	entity, exists := entities[entityID]
@@ -85,6 +89,7 @@ func ConnectEntity(w http.ResponseWriter, r *http.Request) {
 
 func DisconnectEntity(w http.ResponseWriter, r *http.Request) {
 	params := r.URL.Query()
+	fmt.Println(params)
 	entityID := params.Get("entityId")
 
 	entity, exists := entities[entityID]
@@ -107,8 +112,10 @@ func DisconnectEntity(w http.ResponseWriter, r *http.Request) {
 }
 
 func SendInputs(w http.ResponseWriter, r *http.Request) {
-	entityID := r.URL.Query().Get("entityId")
-	inputsBase64 := r.URL.Query().Get("inputsBase64")
+	params := r.URL.Query()
+	fmt.Println(params)
+	entityID := params.Get("entityId")
+	inputsBase64 := params.Get("inputsBase64")
 
 	if entityID == "" || inputsBase64 == "" {
 		w.WriteHeader(http.StatusConflict)
@@ -152,6 +159,7 @@ func SendInputs(w http.ResponseWriter, r *http.Request) {
 
 func GetOutputs(w http.ResponseWriter, r *http.Request) {
 	params := r.URL.Query()
+	fmt.Println(params)
 	entityID := params.Get("entityId")
 
 	entity, exists := entities[entityID]

@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 func DisplayAndOptionallyExit(errorMessage string, exit bool) {
@@ -108,4 +109,56 @@ func WriteToBody(w http.ResponseWriter, message string) {
 	if err != nil {
 		fmt.Printf("ERROR: Couldn't write Body: %s\n", message)
 	}
+}
+
+func BuildRegisterURL(baseURL, entityID, bytesIn, bytesOut string) string {
+	return fmt.Sprintf("%s/register?entityId=%s&bytesInput=%s&bytesOutput=%s", baseURL, entityID, bytesIn, bytesOut)
+}
+
+func BuildUnregisterURL(baseURL, entityID string) string {
+	return fmt.Sprintf("%s/unregister?entityId=%s&", baseURL, entityID)
+}
+
+func BuildConnectURL(baseURL, entityID string) string {
+	return fmt.Sprintf("%s/connect?entityId=%s&", baseURL, entityID)
+}
+
+func BuildDisconnectURL(baseURL, entityID string) string {
+	return fmt.Sprintf("%s/disconnect?entityId=%s&", baseURL, entityID)
+}
+
+func BuildSendInputsURL(baseURL, entityID, stringLength string) string {
+	length, err := strconv.Atoi(stringLength)
+	if err != nil {
+		fmt.Println(">>> LENGTH STRING INVALID")
+		return fmt.Sprintf("%s/send_inputs?entityId=%s", baseURL, entityID)
+	}
+
+	inputsByteSlice, err := RandomBytes(length)
+	if err != nil {
+		fmt.Println(">>> CANNOT GENERATE RANDOM BYTES")
+		inputsByteSlice = []byte("")
+	}
+
+	inputsBase64 := ByteSliceToBase64URL(inputsByteSlice)
+	return fmt.Sprintf("%s/send_inputs?entityId=%s&inputsBase64=%s", baseURL, entityID, inputsBase64)
+}
+
+func BuildGetOutputsURL(baseURL, entityID string) string {
+	return fmt.Sprintf("%s/get_outputs?entityId=%s", baseURL, entityID)
+}
+
+func SendRequest(url string) {
+	response, err := http.Get(url)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	defer response.Body.Close()
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+
+	}
+	fmt.Printf("OK: message body [%s]\n", string(body))
 }
